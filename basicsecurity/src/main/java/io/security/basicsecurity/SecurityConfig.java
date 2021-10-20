@@ -2,6 +2,7 @@ package io.security.basicsecurity;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -27,11 +28,20 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     UserDetailsService userDetailsService;  //use to remember-me
 
     @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {  //사용자 생성, 권한 설정
+        //메모리 방식으로 사용자 생성 - 갯수 제한 없음
+        //{noop} 패스워드 암호화 알고리즘 방식을 prefix형태로 작성해줘야함 {noop}은 평문으로 암호화
+        auth.inMemoryAuthentication().withUser("user").password("{noop}1111").roles("USER");
+        auth.inMemoryAuthentication().withUser("sys").password("{noop}1111").roles("SYS");
+        auth.inMemoryAuthentication().withUser("admin").password("{noop}1111").roles("ADMIN");  //("ADMIN", "SYS", "USER")가능
+    }
+
+    @Override
     protected void configure(HttpSecurity http) throws Exception {
 
         //인가 정책 - 어떤 요청에 대해 인증 받도록 설정
-        http.authorizeRequests()
-                .anyRequest().authenticated();
+//        http.authorizeRequests()
+//                .anyRequest().authenticated();
 
         //인증 정책 - formLogin 설정
         http
@@ -96,6 +106,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .sessionManagement()
                 .sessionFixation().changeSessionId();
 
+        //인가 정책 - 권한 설정
+        http
+                .authorizeRequests()
+                .antMatchers("/user").hasRole("USER")
+                .antMatchers("/admin/pay").hasRole("ADMIN")
+                .antMatchers("/admin/**").access("hasRole('ADMIN') or hasRole('SYS')")
+                .anyRequest().authenticated();
 
     }
 }
